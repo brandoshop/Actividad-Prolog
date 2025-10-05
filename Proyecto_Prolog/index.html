@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="tau-prolog.js"></script>
+    <style>
+        body { font-family: 'Comic Sans MS', Arial, sans-serif; background: #f0f4f8; margin:0; padding:20px; }
+        h2 { text-align:center; color:#2c3e50; }
+        label { font-weight:bold; margin-right:10px; }
+        select, button { padding:5px 10px; border-radius:8px; border:1px solid #ccc; margin-bottom:10px; }
+        button { background-color:#3498db; color:white; cursor:pointer; }
+        button:hover { background-color:#2980b9; }
+        .container { max-width:500px; margin:auto; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); }
+        ul { list-style:none; padding-left:0; }
+        li { padding:4px 0; display:flex; justify-content:space-between; align-items:center; }
+        .aprobado { color:green; font-weight:bold; }
+        .posible { color:blue; font-weight:bold; }
+        .imposible { color:red; font-weight:bold; }
+        .remove-btn { background-color:red; color:white; border:none; border-radius:6px; padding:2px 6px; cursor:pointer; font-size:12px; }
+        .remove-btn:hover { background-color:darkred; }
+        #respuesta { padding:8px; border-radius:6px; margin-top:10px; font-weight:bold; }
+    </style>
+</head>
+<body>
+    <h2>Gestión de Cursos del Alumno</h2>
+    <div class="container">
+        <div>
+            <label>Alumno:</label>
+            <select id="alumno" onchange="mostrarAprobados()">
+                <option value="juan">Juan</option>
+                <option value="ana">Ana</option>
+                <option value="luis">Luis</option>
+                <option value="maria">María</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Curso:</label>
+            <select id="curso">
+                <option value="mat_i">Matemáticas I</option>
+                <option value="mat_ii">Matemáticas II</option>
+                <option value="fis_i">Física I</option>
+                <option value="fis_ii">Física II</option>
+                <option value="prog_i">Programación I</option>
+                <option value="prog_ii">Programación II</option>
+            </select>
+        </div>
+
+        <button onclick="consulta()">¿Puede tomar este curso?</button>
+        <button onclick="agregarCurso()">Agregar curso aprobado</button>
+
+        <h3>Cursos aprobados:</h3>
+        <ul id="lista_aprobados"></ul>
+
+        <h3>Resultado:</h3>
+        <p id="respuesta"></p>
+    </div>
+
+    <script>
+        // Base de cursos y requisitos
+        const cursos = ["mat_i","mat_ii","fis_i","fis_ii","prog_i","prog_ii"];
+        const requisitos = { "mat_ii":"mat_i", "fis_ii":"fis_i", "prog_ii":"prog_i" };
+
+        // Cursos aprobados dinámicos por alumno
+        let aprobados = {
+            juan: ["mat_i","fis_i"],
+            ana: ["mat_i","prog_i"],
+            luis: ["fis_i","prog_i"],
+            maria: ["mat_i","fis_i","prog_i"]
+        };
+
+        // Crear la sesión Prolog
+        let session = pl.create();
+
+        function reconstruirBaseProlog(){
+            let base = "";
+            cursos.forEach(c => base += `curso(${c}).\n`);
+            for(let c in requisitos) base += `requisito(${c},${requisitos[c]}).\n`;
+            for(let alumno in aprobados){
+                aprobados[alumno].forEach(c => base += `aprobado(${alumno},${c}).\n`);
+            }
+            base += `
+                puede_tomar(Alumno, Curso) :-
+                    curso(Curso),
+                    \\+ aprobado(Alumno, Curso),
+                    (requisito(Curso, Req) -> aprobado(Alumno, Req) ; true).
+
+                ya_aprobado(Alumno, Curso) :- aprobado(Alumno, Curso).
+            `;
+            session = pl.create();
+            session.consult(base);
+        }
+
+        function mostrarAprobados(){
+            let alumno = document.getElementById("alumno").value;
+            let lista = document.getElementById("lista_aprobados");
+            lista.innerHTML = "";
+
+            aprobados[alumno].forEach(c => {
+                let li = document.createElement("li");
+                li.textContent = c;
+                li.className = "aprobado";
+
+                let btn = document.createElement("button");
+                btn.textContent = "X";
+                btn.className = "remove-btn";
+                btn.onclick = function(){ quitarCurso(alumno, c); };
+                li.appendChild(btn);
+
+                lista.appendChild(li);
+            });
+
+            document.getElementById("respuesta").innerHTML = "";
+            reconstruirBaseProlog();
+        }
+
+        function consulta(){
+            let alumno = document.getElementById("alumno").value;
+            let curso = document.getElementById("curso").value;
+
+            session.query(`puede_tomar(${alumno}, ${curso}).`);
+            session.answer(function(answer){
+                let res = document.getElementById("respuesta");
+                if(pl.type.is_substitution(answer)){
+                    res.textContent = alumno + " puede tomar " + curso;
+                    res.className = "posible";
+                } else {
+                    res.textContent = alumno + " NO puede tomar " + curso;
+                    res.className = "imposible";
+                }
+            });
+        }
+
+        function agregarCurso(){
+            let alumno = document.getElementById("alumno").value;
+            let curso = document.getElementById("curso").value;
+
+            if(!aprobados[alumno].includes(curso)){
+                aprobados[alumno].push(curso);
+                mostrarAprobados();
+            } else {
+                alert(alumno + " ya aprobó " + curso);
+            }
+        }
+
+        function quitarCurso(alumno, curso){
+            aprobados[alumno] = aprobados[alumno].filter(c => c !== curso);
+            mostrarAprobados();
+        }
+
+        mostrarAprobados();
+    </script>
+</body>
+</html>
