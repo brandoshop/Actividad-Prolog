@@ -51,7 +51,7 @@ Esta aplicación puede ser utilizada como práctica académica para aprender **p
 1. Descargar el proyecto desde el repositorio en formato ZIP.  
 2. Descomprimir la carpeta en tu computadora.  
 3. **Abrir `index.html` en tu navegador** haciendo doble clic o mediante “Abrir con…”.  
-4. La aplicación se cargará automáticamente y estará lista para usar.
+4. La aplicación se cargará automáticamente y estará lista para usar,.
 
 ### Opción 2: Clonar el repositorio con Git
 
